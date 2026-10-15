@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Tooling
+.env
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Task statement (not ours to publish)
+task.pdf

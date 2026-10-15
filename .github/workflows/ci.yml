@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.12.15"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      # Integration tests start PostgreSQL and RabbitMQ with testcontainers (Docker is available on the runner).
+      - run: uv run pytest
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose build
+      - run: docker compose up -d --wait
+      - name: Smoke test
+        run: |
+          curl -fsS -X POST http://localhost:8000/api/v1/payments \
+            -H "X-API-Key: dev-api-key-change-me-0123456789" -H "Idempotency-Key: ci-smoke" \
+            -H "Content-Type: application/json" \
+            -d '{"amount":"1.00","currency":"USD","webhook_url":"http://webhook-receiver:9000/webhooks/ok"}'
+      - if: failure()
+        run: docker compose logs
+      - if: always()
+        run: docker compose down -v
